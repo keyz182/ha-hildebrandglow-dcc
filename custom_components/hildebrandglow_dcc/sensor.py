@@ -4,6 +4,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import datetime, time, timedelta
 import logging
+
+from pytz import timezone
 import itertools
 import statistics
 import requests
@@ -41,6 +43,9 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(minutes=5)
+
+# Replace 'Europe/London' with your actual timezone
+tz = timezone("Europe/London")
 
 
 async def async_setup_entry(
@@ -150,9 +155,9 @@ def device_name(resource, virtual_entity) -> str:
 
 
 async def should_update() -> bool:
-    """Check if time is between 0-5 or 30-35 minutes past the hour."""
-    minutes = datetime.now().minute
-    if (0 <= minutes <= 5) or (30 <= minutes <= 35):
+    """Check if time is between 1-5 or 31-35 minutes past the hour."""
+    minutes = datetime.now(tz).minute
+    if (1 <= minutes <= 5) or (31 <= minutes <= 35):
         return True
     return False
 
@@ -160,7 +165,7 @@ async def should_update() -> bool:
 async def daily_data(hass: HomeAssistant, resource, t_from: datetime = None) -> (float, str):
     """Get daily usage from the API."""
     # Always pull down the last 6 hours of readings
-    now = datetime.now()
+    now = datetime.now(tz)
     # Round to the day to set time to 00:00:00
     if t_from is None:
         t_from = await hass.async_add_executor_job(resource.round, datetime.now() - timedelta(hours=6), "P1D")
@@ -241,7 +246,7 @@ class HistoricalSensorMixin(PollUpdateMixin, HistoricalSensor, SensorEntity):
     @property
     def statistic_id(self) -> str:
         return self.entity_id
-    
+
     def get_statistic_metadata(self) -> StatisticMetaData:
         meta = super().get_statistic_metadata()
         meta["has_sum"] = True
